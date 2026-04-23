@@ -66,9 +66,9 @@ function cleanData(data){
 
 function generateL1Voronoi(sitePoints, width, height, nudgeData = true){
 
-    if(nudgeData){
-        sitePoints = cleanData(sitePoints);
-    }
+    // if(nudgeData){
+    //     sitePoints = cleanData(sitePoints.slice());
+    // }
 
     // sort points by x axis, breaking ties with y
     let sites = sitePoints.sort((a,b)=>{
@@ -543,26 +543,14 @@ function findL1Bisector(P1, P2, width, height){
         (P1.site[1] + P2.site[1]) / 2
     ];
 
-    let slope = yDistance/xDistance > 0 ? -1 : 1;
-
-    let intercetpt = midpoint[1] - midpoint[0] * slope;
-
     let vertexes = [];
     let up = null;
-    
-    if(Math.abs(xDistance) === Math.abs(yDistance)){
-        throw new Error(
-            `Square bisector: Points ${JSON.stringify(P1)} and ${JSON.stringify(P2)} are points on a square 
-            (That is, their vertical distance is equal to their horizontal distance). Consider using the nudge points function or set the nudge data flag.`
-        );
-    }
 
+    
     if(samePoint(P1.site,P2.site)){
         throw new Error(`Duplicate point: Points ${JSON.stringify(P1)} and ${JSON.stringify(P2)} are duplicates. please remove one`);
     }
-    
 
-    
     if(Math.abs(xDistance) === 0){
         vertexes = [
             [0, midpoint[1]],
@@ -580,7 +568,11 @@ function findL1Bisector(P1, P2, width, height){
 
         return {sites:[P1, P2], up:true, points:vertexes, intersections:[], compound:false};
     }
-    if(Math.abs(xDistance) >= Math.abs(yDistance)){
+
+    let slope = yDistance/xDistance > 0 ? -1 : 1;
+    let intercetpt = midpoint[1] - midpoint[0] * slope;
+        
+    if(Math.abs(xDistance) > Math.abs(yDistance)){
         vertexes = [
             [(P1.site[1] - intercetpt) / slope, P1.site[1]],
             [(P2.site[1] - intercetpt) / slope, P2.site[1]]
@@ -588,13 +580,31 @@ function findL1Bisector(P1, P2, width, height){
 
         up = true;
     }
-    else{
+    else if(Math.abs(xDistance) < Math.abs(yDistance)){
         vertexes = [
             [P1.site[0] , (P1.site[0] * slope) + intercetpt ],
             [P2.site[0] , (P2.site[0] * slope) + intercetpt ]
         ];
 
         up = false;
+    }
+    else { // Math.abs(xDistance) === Math.abs(yDistance)
+        if (slope === 1){
+            vertexes = [
+                [P1.site[1] - intercetpt, P1.site[1]],
+                [P2.site[1] - intercetpt, P2.site[1]]
+            ];
+
+            up = true;
+        }
+        else { // slope === -1
+            vertexes = [
+                [P1.site[0] , -P1.site[0] + intercetpt ],
+                [P2.site[0] , -P2.site[0] + intercetpt ]
+            ];
+
+            up = false;
+        }
     }
 
     let bisector = {sites:[P1, P2], up:up, points:[], intersections:[], compound:false};    
@@ -719,6 +729,14 @@ function trimBisector(target, intersector, intersection){
  */
 function isNewBisectorUpward(hopTo, hopFrom, site, goUp){
     
+    // if(hopTo.site[0] === hopFrom.site[0]){
+    //     return site.site[1] > hopTo.site[1];
+    // }
+
+    if(hopTo.site[0] - site.site[0] === 0){
+        return site.site[1] > hopTo.site[1];
+    }
+
     let slope = (hopTo.site[1] - site.site[1])/(hopTo.site[0] - site.site[0]);
     let intercept = hopTo.site[1] - (slope * hopTo.site[0]);
 

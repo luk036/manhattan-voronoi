@@ -834,7 +834,7 @@ def finalize_sites(sites, width, height):
         )
 
         # Get neighbors
-        neighbors = [find_hop_to(b, site["site"]) for b in site["bisectors"]]
+        neighbors = [find_hop_to(b, site)["site"] for b in site["bisectors"]]
 
         site["polygon_points"] = polygon_points
         site["d"] = d_str

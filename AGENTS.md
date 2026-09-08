@@ -25,13 +25,21 @@ npm install
 
 ### Testing
 ```bash
-# No tests configured - placeholder only
-npm test  # Echoes "Error: no test specified" and exits 1
-```
+# Golden-master tests (42 corpus cases) + smoke tests. Rebuilds the library first.
+npm test
 
-**To add tests**, consider adding a test framework (Jest, Mocha, or QUnit) and updating `package.json`:
-```json
-"test": "jest"
+# JS <-> Python differential harness (py_ai port). Fails only on NEW divergences
+# from the recorded baseline.
+npm run test:diff
+
+# Re-record the golden snapshot after an intentional behavior change.
+npm run test:golden:record
+
+# Re-record the differential divergence baseline after a deliberate change.
+npm run test:diff:refresh
+
+# Python port's own pytest suite
+cd py_ai && python -m pytest -q
 ```
 
 ### Running the Demo
@@ -121,19 +129,33 @@ npx serve .
 ## Directory Structure
 
 ```
-recti-voronoi/
+manhattan-voronoi/
 ├── src/
-│   └── voronoi.js          # Main library (source)
-├── dist/
-│   └── voronoi.js        # Built library (Babel output)
+│   ├── voronoi.js          # Library facade (public re-exports)
+│   ├── generator.js        # Pipeline composition + naive generator
+│   ├── geometry.js         # Pure point/segment geometry predicates
+│   ├── bisector.js         # Site/Bisector factories + graph predicates
+│   ├── l1Metric.js         # L1 bisector construction (metric seam)
+│   ├── mergeLine.js        # Merge-line walker (Lee & Wong merge step)
+│   ├── divideConquer.js    # Recursive split step
+│   ├── polygonizer.js      # Bisector chaining + SVG path adapter
+│   └── preprocess.js       # Input nudging (cleanData)
+├── dist/                   # Built library (Babel output, mirrors src/)
 ├── build/
-│   └── build.js          # Bundled demo
-├── main.js              # Demo entry point
-├── index.html           # Demo HTML
-├── styles.css          # Demo styles
-├── gulpfile.js         # Build configuration
-├── package.json       # Project config
-└── README.md         # Documentation
+│   └── build.js            # Bundled demo
+├── tests/
+│   ├── corpus.js           # Deterministic shared test corpus (42 cases)
+│   ├── golden.js           # Golden-master snapshot tool (record/compare)
+│   ├── golden.test.js      # node:test runner for golden snapshot
+│   ├── smoke.test.js       # Behavior smoke tests (node:test)
+│   ├── differential.js     # JS <-> Python differential harness
+│   └── differential_py.py  # Python side of the harness
+├── main.js                 # Demo entry point
+├── index.html              # Demo HTML
+├── styles.css              # Demo styles
+├── gulpfile.js             # Build configuration
+├── package.json            # Project config
+└── README.md               # Documentation
 ```
 
 ---
@@ -142,7 +164,7 @@ recti-voronoi/
 
 1. **No TypeScript** - plain JavaScript only
 2. **No linting configured** - manually check code quality
-3. **No tests** - add at your discretion if needed
+3. **Tests live in `tests/`** (node:test + golden snapshot + Python differential)
 4. **Build outputs to `dist/` and `build/`** - don't edit built files directly
 5. **Compatibility** - ES6+ (no IE11 support needed)
 
@@ -152,8 +174,10 @@ recti-voronoi/
 
 | Task | Approach |
 |------|---------|
-| Add new function | Add to `src/voronoi.js`, export in list, rebuild library |
-| Fix bug | Edit `src/voronoi.js`, test manually in demo |
+| Add new function | Add to the matching module in `src/`, re-export from `src/voronoi.js` if public, rebuild library |
+| Fix bug | Edit the owning module in `src/`, run `npm test` + `npm run test:diff` |
+| Change output behavior | Deliberately re-record: `npm run test:golden:record` (and `npm run test:diff:refresh` if the Python port is affected) |
+| Add a test case | Extend the shared corpus in `tests/corpus.js`, then `npm run test:golden:record` |
 | Add demo feature | Edit `main.js` or `index.html` |
 | Change build process | Edit `gulpfile.js` |
 | Add dependencies | `npm install --save <package>`, update this file |

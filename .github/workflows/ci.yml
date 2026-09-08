@@ -1,0 +1,50 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ["20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install npm dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install pytest
+        run: python -m pip install pytest
+
+      - name: Build library and run JS tests (golden + smoke)
+        run: npm test
+
+      - name: Run JS <-> Python differential harness
+        run: npm run test:diff
+
+      - name: Run Python port pytest suite
+        working-directory: py_ai
+        run: python -m pytest -q
+
+      - name: Build demo bundle
+        run: npx gulp

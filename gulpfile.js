@@ -26,6 +26,7 @@ function compile(watch) {
   if (watch) { bundler = watchify(bundler); }
 
   function rebundle() {
+    fs.mkdirSync('./build', { recursive: true });
     return bundler.bundle()
       .on('error', function(err) { console.error(err); this.emit('end'); })
       .pipe(fs.createWriteStream('./build/build.js'));

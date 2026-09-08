@@ -4,7 +4,13 @@
   "description": "library for generating L1(manhattan distance) voronoi diagrams",
   "main": "dist/voronoi.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "gulp build",
+    "build-library": "gulp build-library",
+    "test": "gulp build-library && node --test \"tests/**/*.test.js\"",
+    "test:golden": "node tests/golden.js",
+    "test:golden:record": "node tests/golden.js --record",
+    "test:diff": "node tests/differential.js",
+    "test:diff:refresh": "node tests/differential.js --refresh",
     "start": ""
   },
   "repository": {

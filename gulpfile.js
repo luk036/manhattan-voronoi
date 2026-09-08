@@ -1,3 +1,4 @@
+const fs = require('fs');
 const gulp = require('gulp');
 const watch = require('gulp-watch');
 const sourcemaps = require('gulp-sourcemaps');
@@ -6,8 +7,6 @@ const concat = require('gulp-concat');
 const browserify = require('browserify');
 const babelify = require('babelify');
 const watchify = require('watchify');
-const source = require('vinyl-source-stream');
-const buffer = require('vinyl-buffer');
 const babelPreset = require('babel-preset-es2015');
 
 gulp.task('build-library', () => {
@@ -22,16 +21,14 @@ gulp.task('build-library', () => {
 
 function compile(watch) {
   console.log("rebuilding...");
-  var bundler = browserify('./main.js', { debug: true }).transform(babelify.configure({presets: ["es2015"]}));
+  var bundler = browserify('./main.js', { debug: true });
+  bundler.transform(babelify.configure({presets: ["es2015"]}));
+  if (watch) { bundler = watchify(bundler); }
 
   function rebundle() {
-    bundler.bundle()
+    return bundler.bundle()
       .on('error', function(err) { console.error(err); this.emit('end'); })
-      .pipe(source('build.js'))
-      .pipe(buffer())
-      .pipe(sourcemaps.init({ loadMaps: true }))
-      .pipe(sourcemaps.write('./'))
-      .pipe(gulp.dest('./build'));
+      .pipe(fs.createWriteStream('./build/build.js'));
   }
 
   if (watch) {
@@ -41,7 +38,7 @@ function compile(watch) {
     });
   }
 
-  rebundle();
+  return rebundle();
 }
 
 function watchSource() {
@@ -51,14 +48,14 @@ function watchSource() {
   });
 };
 
-gulp.task('default',['build-library',"build"]);
-
 gulp.task('build', function() { return compile(); });
 
 gulp.task('watch',function(){
-    return gulp.watch(['src/**/*.js','main.js'], ['build']);
+    return gulp.watch(['src/**/*.js','main.js'], gulp.series('build'));
 });
 
 gulp.task('watch-library',function(){
-    return gulp.watch(['src/**/*.js'], ['build-library']);
+    return gulp.watch(['src/**/*.js'], gulp.series('build-library'));
 });
+
+gulp.task('default', gulp.series('build-library', 'build'));

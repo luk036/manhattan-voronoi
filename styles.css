@@ -19,6 +19,19 @@ body{
     justify-content: space-between;
 }
 
+.grid2{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.grid2 svg{
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid #e0e0e0;
+}
+
 #points{
     white-space: pre-wrap;    
 }

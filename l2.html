@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>L1 vs L2 Voronoi</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <h1>L1 (Manhattan) vs L2 (Euclidean) Voronoi</h1>
+        <p>This demo renders the same random sites under both metrics. The top row is Lee and Wong's L1 diagram and its dual Delaunay neighbour graph; the bottom row is the L2 diagram (Guibas and Stolfi's divide-and-conquer Delaunay triangulation) and its dual graph. The L1 graph is drawn from the neighbours reported by the L1 bisector graph; the L2 graph from the divide-and-conquer triangulation.</p>
+        <p>Refresh this page to generate another diagram. Add <code>?points=N</code> to the URL to change the number of sites.</p>
+        <div class="container grid2">
+            <div>
+                <h2>L1 (Manhattan)</h2>
+                <svg id="l1-diagram"></svg>
+            </div>
+            <div>
+                <h2>L1 Delaunay graph</h2>
+                <svg id="l1-delaunay"></svg>
+            </div>
+            <div>
+                <h2>L2 (Euclidean)</h2>
+                <svg id="l2-diagram"></svg>
+            </div>
+            <div>
+                <h2>L2 Delaunay graph</h2>
+                <svg id="l2-delaunay"></svg>
+            </div>
+        </div>
+        <h3>Points</h3>
+        <pre id="points"></pre>
+        <p><a href="index.html">Back to the L1 demo</a></p>
+        <script src="build/l2.js"></script>
+    </body>
+</html>

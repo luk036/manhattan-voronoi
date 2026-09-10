@@ -19,9 +19,9 @@ gulp.task('build-library', () => {
         .pipe(gulp.dest('dist'));
 });
 
-function compile(watch) {
-  console.log("rebuilding...");
-  var bundler = browserify('./main.js', { debug: true });
+function bundle(entry, output, watch) {
+  console.log("rebuilding " + entry + "...");
+  var bundler = browserify(entry, { debug: true });
   bundler.transform(babelify.configure({presets: ["es2015"]}));
   if (watch) { bundler = watchify(bundler); }
 
@@ -29,7 +29,7 @@ function compile(watch) {
     fs.mkdirSync('./build', { recursive: true });
     return bundler.bundle()
       .on('error', function(err) { console.error(err); this.emit('end'); })
-      .pipe(fs.createWriteStream('./build/build.js'));
+      .pipe(fs.createWriteStream(output));
   }
 
   if (watch) {
@@ -42,6 +42,10 @@ function compile(watch) {
   return rebundle();
 }
 
+function compile(watch) {
+  return bundle('./main.js', './build/build.js', watch);
+}
+
 function watchSource() {
   return watch(['src/**/*.js','main.js'], function(){
 
@@ -51,12 +55,14 @@ function watchSource() {
 
 gulp.task('build', function() { return compile(); });
 
+gulp.task('build-l2', function() { return bundle('./l2main.js', './build/l2.js', false); });
+
 gulp.task('watch',function(){
-    return gulp.watch(['src/**/*.js','main.js'], gulp.series('build'));
+    return gulp.watch(['src/**/*.js','main.js','l2main.js'], gulp.series('build', 'build-l2'));
 });
 
 gulp.task('watch-library',function(){
     return gulp.watch(['src/**/*.js'], gulp.series('build-library'));
 });
 
-gulp.task('default', gulp.series('build-library', 'build'));
+gulp.task('default', gulp.series('build-library', 'build', 'build-l2'));

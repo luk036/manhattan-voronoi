@@ -1,13 +1,13 @@
 import pytest
 from voronoi import (
     generate_l1_voronoi,
-    generate_voronoi_points,
     clean_data,
     distance,
     same_point,
     angle,
     segment_intersection,
 )
+from naive_oracle import generate_voronoi_points
 
 
 class TestDistance:

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "gulp build",
     "build-library": "gulp build-library",
-    "test": "gulp build-library && node --test tests/golden.test.js tests/smoke.test.js tests/naive.test.js",
+    "test": "gulp build-library && node --test tests/golden.test.js tests/smoke.test.js tests/naive.test.js tests/l2.test.js",
     "test:golden": "node tests/golden.js",
     "test:golden:record": "node tests/golden.js --record",
     "test:diff": "node tests/differential.js",

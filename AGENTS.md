@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A JavaScript library for generating L1 (Manhattan distance) Voronoi diagrams using Lee and Wong's algorithm. Exports ES6 modules from `src/voronoi.js`.
+A JavaScript library for generating L1 (Manhattan distance) Voronoi diagrams using Lee and Wong's algorithm, and L2 (Euclidean) Voronoi diagrams using Guibas and Stolfi's divide-and-conquer Delaunay triangulation. Exports ES6 modules from `src/voronoi.js`.
 
 ---
 
@@ -140,7 +140,10 @@ manhattan-voronoi/
 │   ├── divideConquer.js    # Recursive split step
 │   ├── polygonizer.js      # Bisector chaining (polygon construction)
 │   ├── cell.js             # Result DTO + SVG path adapter (presentation boundary)
-│   └── preprocess.js       # Input nudging (cleanData)
+│   ├── preprocess.js       # Input nudging (cleanData)
+│   ├── quadEdge.js         # Quad-edge primitives (Guibas & Stolfi)
+│   ├── l2Delaunay.js       # D&C Euclidean Delaunay + Delaunay neighbour graph
+│   └── l2Voronoi.js        # L2 cells (half-plane clip) + generateL2Voronoi
 ├── dist/                   # Built library (Babel output, mirrors src/)
 ├── build/
 │   └── build.js            # Bundled demo
@@ -164,7 +167,9 @@ manhattan-voronoi/
 │   ├── naiveOracle.js      # Brute-force oracle (moved out of the library)
 │   ├── naive.test.js       # Oracle smoke test (node:test)
 │   ├── differential.js     # JS <-> Python differential harness
-│   └── differential_py.py  # Python side of the harness
+│   ├── differential_py.py  # Python side of the harness
+│   ├── l2Oracle.js         # Brute-force L2 nearest-site oracle
+│   └── l2.test.js          # L2 oracle + contract tests (node:test)
 ├── main.js                 # Demo entry point
 ├── index.html              # Demo HTML
 ├── styles.css              # Demo styles
@@ -204,5 +209,7 @@ manhattan-voronoi/
 - This is a math-heavy computational geometry library
 - The algorithm (Lee and Wong) has specific edge cases: duplicate points, points on squares
 - The code has intentional nudging behavior controlled by `nudgeData` parameter
+- L2 (Euclidean) is a separate backend: `l2Delaunay.js` runs the divide-and-conquer quad-edge triangulation and `l2Voronoi.js` clips the canvas rectangle by the perpendicular-bisector half-planes of the Delaunay neighbours. It does not share the L1 merge core.
+- L2 has no Python counterpart, so it is intentionally excluded from `tests/differential.js`; it is validated against the brute-force oracle in `tests/l2Oracle.js` instead.
 - When modifying the algorithm, verify with the demo (various `?points=N` values)
 - The demo renders bisectors with color coding by merge level - useful for debugging

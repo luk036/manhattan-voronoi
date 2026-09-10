@@ -4,6 +4,7 @@
  */
 
 import {generateL1Voronoi} from './generator.js';
+import {generateL2Voronoi} from './l2Voronoi.js';
 import {cleanData} from './preprocess.js';
 
-export {generateL1Voronoi, cleanData};
+export {generateL1Voronoi, generateL2Voronoi, cleanData};

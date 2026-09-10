@@ -76,7 +76,7 @@ npx serve .
 ### Imports/Exports
 - Use named exports only:
   ```javascript
-  export {generateVoronoiPoints, generateL1Voronoi, cleanData};
+  export {generateL1Voronoi, cleanData};
   ```
 - Import with destructuring:
   ```javascript
@@ -138,16 +138,31 @@ manhattan-voronoi/
 │   ├── l1Metric.js         # L1 bisector construction (metric seam)
 │   ├── mergeLine.js        # Merge-line walker (Lee & Wong merge step)
 │   ├── divideConquer.js    # Recursive split step
-│   ├── polygonizer.js      # Bisector chaining + SVG path adapter
+│   ├── polygonizer.js      # Bisector chaining (polygon construction)
+│   ├── cell.js             # Result DTO + SVG path adapter (presentation boundary)
 │   └── preprocess.js       # Input nudging (cleanData)
 ├── dist/                   # Built library (Babel output, mirrors src/)
 ├── build/
 │   └── build.js            # Bundled demo
+├── py_ai/                  # Python port, mirrors the src/ module map
+│   ├── voronoi.py          # Facade (public re-exports)
+│   ├── generator.py        # generate_l1_voronoi + naive generator
+│   ├── geometry.py         # angle, distance, same_point, segment_intersection
+│   ├── bisector.py         # Site/Bisector factories + graph predicates
+│   ├── l1_metric.py        # L1 metric strategy (create_l1_metric)
+│   ├── merge_line.py       # Merge-line walker
+│   ├── divide_conquer.py   # Recursive split step
+│   ├── polygonizer.py      # Bisector chaining
+│   ├── cell.py             # Result DTO + SVG path adapter
+│   ├── preprocess.py       # Input nudging (clean_data)
+│   └── naive_oracle.py     # Brute-force oracle (test support)
 ├── tests/
 │   ├── corpus.js           # Deterministic shared test corpus (42 cases)
 │   ├── golden.js           # Golden-master snapshot tool (record/compare)
 │   ├── golden.test.js      # node:test runner for golden snapshot
 │   ├── smoke.test.js       # Behavior smoke tests (node:test)
+│   ├── naiveOracle.js      # Brute-force oracle (moved out of the library)
+│   ├── naive.test.js       # Oracle smoke test (node:test)
 │   ├── differential.js     # JS <-> Python differential harness
 │   └── differential_py.py  # Python side of the harness
 ├── main.js                 # Demo entry point

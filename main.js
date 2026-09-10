@@ -1,4 +1,4 @@
-import {generateVoronoiPoints, generateL1Voronoi, cleanData} from "./src/voronoi.js";
+import {generateL1Voronoi, cleanData} from "./src/voronoi.js";
 
 let main = document.getElementById("main");
 let diagram = document.getElementById("diagram");

@@ -3,7 +3,7 @@
  * mutation helpers that keep the site <-> bisector graph consistent.
  */
 
-import {distance, samePoint, segmentIntersection} from './geometry.js';
+import {samePoint, segmentIntersection} from './geometry.js';
 
 /**
  * Create a site object holding a raw coordinate.
@@ -97,10 +97,11 @@ export function arePointsOnSameEdge(P1, P2, width, height){
  *
  * @param {Site} trapPoint
  * @param {Bisector} bisector
+ * @param {Metric} metric
  * @returns {boolean}
  */
-export function isBisectorTrapped(trapPoint, bisector){
-    return bisector.points.every(point => distance(trapPoint.site, point) <= distance(bisector.sites[0].site, point) && distance(trapPoint.site, point) <= distance(bisector.sites[1].site, point));
+export function isBisectorTrapped(trapPoint, bisector, metric){
+    return bisector.points.every(point => metric.distance(trapPoint.site, point) <= metric.distance(bisector.sites[0].site, point) && metric.distance(trapPoint.site, point) <= metric.distance(bisector.sites[1].site, point));
 }
 
 /**
@@ -123,13 +124,14 @@ export function getExtremePoint(bisector, goUp){
  * @param {Bisector} target
  * @param {Bisector} intersector
  * @param {Array} intersection - [x,y]
+ * @param {Metric} metric
  */
-export function trimBisector(target, intersector, intersection){
+export function trimBisector(target, intersector, intersection, metric){
 
     let polygonSite = intersector.sites.find(e => target.sites.find(d => d === e) === undefined);
 
     let newPoints = target.points.filter(e => {
-        return distance(e, target.sites[0].site) < distance(e, polygonSite.site) && distance(e, target.sites[1].site) < distance(e, polygonSite.site);
+        return metric.distance(e, target.sites[0].site) < metric.distance(e, polygonSite.site) && metric.distance(e, target.sites[1].site) < metric.distance(e, polygonSite.site);
     });
 
     newPoints.push(intersection);
@@ -175,8 +177,9 @@ export function bisectorIntersection(B1, B2){
  *
  * @param {Site} orphanage
  * @param {Site} trapPoint
+ * @param {Metric} metric
  * @returns {Array<Bisector>}
  */
-export function clearOutOrphans(orphanage, trapPoint){
-    return orphanage.bisectors.filter(bisector => !isBisectorTrapped(trapPoint, bisector));
+export function clearOutOrphans(orphanage, trapPoint, metric){
+    return orphanage.bisectors.filter(bisector => !isBisectorTrapped(trapPoint, bisector, metric));
 }

@@ -3,7 +3,7 @@
  * consumers keep importing from a single entry point.
  */
 
-import {generateL1Voronoi, generateVoronoiPoints} from './generator.js';
+import {generateL1Voronoi} from './generator.js';
 import {cleanData} from './preprocess.js';
 
-export {generateVoronoiPoints, generateL1Voronoi, cleanData};
+export {generateL1Voronoi, cleanData};

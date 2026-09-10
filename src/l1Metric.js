@@ -1,25 +1,36 @@
 /**
  * The L1 metric: bisector construction and the upward-test used while walking
- * merge lines. The rest of the pipeline consumes these through a curried
- * `findBisector(siteA, siteB)` function, so this module is the seam where a
- * different metric (e.g. L-infinity) would slot in.
+ * merge lines. The rest of the pipeline consumes these through the object
+ * returned by `createL1Metric`, so this module is the seam where a different
+ * metric (e.g. L-infinity) would slot in.
  */
 
-import {samePoint} from './geometry.js';
+import {samePoint, distance} from './geometry.js';
 import {createBisector} from './bisector.js';
 
 /**
- * Curry a bisector factory with fixed canvas dimensions.
+ * Build the L1 metric strategy for a fixed canvas.
  *
- * @param {function} callback
+ * This bundles every metric-specific operation the pipeline needs - bisector
+ * construction, the upward test and the distance - together with the canvas
+ * dimensions. The rest of the pipeline consumes this one object, so no module
+ * below the facade imports an L1 routine directly and a different metric is
+ * simply a new factory in this file.
+ *
  * @param {number} width
  * @param {number} height
- * @return {function}
+ * @returns {Metric}
  */
-export function curryFindBisector(callback, width, height){
-    return function(P1, P2){
-        return callback(P1, P2, width, height);
-    }
+export function createL1Metric(width, height){
+    return {
+        width: width,
+        height: height,
+        distance: distance,
+        bisector: function(P1, P2){
+            return findL1Bisector(P1, P2, width, height);
+        },
+        isUpward: isNewBisectorUpward
+    };
 }
 
 /**
@@ -49,21 +60,23 @@ export function findL1Bisector(P1, P2, width, height){
     }
 
     if(Math.abs(xDistance) === 0){
-        vertexes = [
+        let bisector = createBisector([P1, P2], false);
+        bisector.points = [
             [0, midpoint[1]],
             [width, midpoint[1]]
         ];
 
-        return {sites:[P1, P2], up:false, points:vertexes, intersections:[], compound:false};
+        return bisector;
     }
 
     if(Math.abs(yDistance) === 0){
-        vertexes = [
+        let bisector = createBisector([P1, P2], true);
+        bisector.points = [
             [midpoint[0], 0],
             [midpoint[0], height]
         ];
 
-        return {sites:[P1, P2], up:true, points:vertexes, intersections:[], compound:false};
+        return bisector;
     }
 
     let slope = yDistance/xDistance > 0 ? -1 : 1;

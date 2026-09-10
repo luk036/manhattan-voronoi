@@ -46,7 +46,7 @@ It handles these situations by cleaning the input points to move them slightly o
 ## Example Usage
 
 ~~~ javascript
-import {generateVoronoiPoints, generateL1Voronoi, cleanData} from "manhattan-Voronoi";
+import {generateL1Voronoi, cleanData} from "manhattan-Voronoi";
 
 let sites  = [[4,6], [3,10], [10,6], [1,2]];
 let width  = 30;

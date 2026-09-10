@@ -1,13 +1,14 @@
 /**
- * Public generator entry points. generateL1Voronoi composes the pipeline
- * stages (preprocess -> sort/init -> divide & conquer -> polygonize); the
- * exported functions are the library facade.
+ * Public generator entry point. generateL1Voronoi composes the pipeline
+ * stages (preprocess -> sort/init -> divide & conquer -> polygonize). The
+ * naive brute-force generator lives in tests/ as an oracle.
  */
 
 import {recursiveSplit} from './divideConquer.js';
 import {polygonizeSite} from './polygonizer.js';
+import {toCell} from './cell.js';
 import {cleanData} from './preprocess.js';
-import {curryFindBisector, findL1Bisector} from './l1Metric.js';
+import {createL1Metric} from './l1Metric.js';
 import {createSite} from './bisector.js';
 
 function compareByXY(a, b){
@@ -36,44 +37,10 @@ export function generateL1Voronoi(sitePoints, width, height, nudgeData = true){
 
     let sites = workingPoints.slice().sort(compareByXY).map(createSite);
 
-    const findBisector = curryFindBisector(findL1Bisector, width, height);
-    const graph = recursiveSplit(sites, findBisector, width, height);
+    const metric = createL1Metric(width, height);
+    const graph = recursiveSplit(sites, metric);
 
-    return graph.map(site => polygonizeSite(site, width, height));
-}
+    const cells = graph.map(site => polygonizeSite(site, metric));
 
-/**
- * Generate Voronoi points via a basic, naive algorithm. Takes any distance
- * callback.
- *
- * @param {array} points
- * @param {number} width
- * @param {number} height
- * @param {function} distanceCallback
- * @returns {Array<Array<number>>}
- */
-export function generateVoronoiPoints(points, width, height, distanceCallback){
-
-    let colors = points.map(e =>{ return {point:e, color: new Array(3).fill(0).map(d => Math.ceil(Math.random() * 255))}})
-
-    let imageData = new Array(width * height).fill(0).map((point, index) => {
-        let coordinate = [index % height , Math.ceil(index / height)];
-        let closest = colors.reduce((c,e) => {
-
-            if(Array.isArray(c)){
-                return c.every(d => distanceCallback(d.point, coordinate) < distanceCallback(e.point, coordinate) ) ? c : e;
-            }
-            else if(distanceCallback(c.point, coordinate) === distanceCallback(e.point, coordinate)){
-                return [c,e];
-            }
-            else{
-                return distanceCallback(c.point, coordinate) < distanceCallback(e.point, coordinate) ? c : e;
-            }
-
-        }, {point:[Infinity,Infinity]});
-
-        return Array.isArray(closest) ? [0,0,0] : closest.color;
-    });
-
-    return imageData;
+    return cells.map(toCell);
 }

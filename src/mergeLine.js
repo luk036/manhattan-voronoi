@@ -5,9 +5,8 @@
  * bisector needs to be unwound).
  */
 
-import {angle, distance, samePoint} from './geometry.js';
+import {angle, samePoint} from './geometry.js';
 import {bisectorIntersection, trimBisector, findHopTo, isBisectorTrapped, getExtremePoint, removeBisector} from './bisector.js';
-import {isNewBisectorUpward} from './l1Metric.js';
 
 /**
  * Determine which border is crossed first: "right", "left", or null when both
@@ -37,16 +36,16 @@ export function determineFirstBorderCross(cropR, cropL, currentCropPoint){
  * @param {Array} currentCropPoint - [x,y]
  * @param {Bisector} crossedBorder
  * @param {boolean} goUp
- * @param {function} findBisector
+ * @param {Metric} metric
  * @param {boolean} ascending - sort direction (left side sorts descending)
  * @returns {Array<{bisector: Bisector, point: Array}>}
  */
-function cropCandidates(sideSite, otherSite, currentBisector, currentCropPoint, crossedBorder, goUp, findBisector, ascending){
+function cropCandidates(sideSite, otherSite, currentBisector, currentCropPoint, crossedBorder, goUp, metric, ascending){
     return sideSite.bisectors
         .map(e => {return {bisector: e, point: bisectorIntersection(currentBisector, e)}})
         .filter(e => {
             let hopTo = findHopTo(e.bisector, sideSite);
-            return e.point && (goUp === isNewBisectorUpward(hopTo, sideSite, otherSite, goUp)) && (!samePoint(e.point, currentCropPoint) || e.bisector !== crossedBorder);
+            return e.point && (goUp === metric.isUpward(hopTo, sideSite, otherSite, goUp)) && (!samePoint(e.point, currentCropPoint) || e.bisector !== crossedBorder);
         })
         .sort((a, b) => {
             let angleA = angle(sideSite.site, findHopTo(a.bisector, sideSite).site);
@@ -55,18 +54,14 @@ function cropCandidates(sideSite, otherSite, currentBisector, currentCropPoint, 
         })
         .filter((e, i, candidates) => {
             let hopTo = findHopTo(e.bisector, sideSite);
-            let newMergeLine = findBisector(otherSite, hopTo);
-            trimBisector(newMergeLine, e.bisector, e.point);
-            return candidates.every(d => !isBisectorTrapped(findHopTo(d.bisector, sideSite), newMergeLine) || findHopTo(d.bisector, sideSite) === hopTo);
+            let newMergeLine = metric.bisector(otherSite, hopTo);
+            trimBisector(newMergeLine, e.bisector, e.point, metric);
+            return candidates.every(d => !isBisectorTrapped(findHopTo(d.bisector, sideSite), newMergeLine, metric) || findHopTo(d.bisector, sideSite) === hopTo);
         });
 }
 
 function noCrop(goUp){
     return {bisector: null, point: goUp ? [Infinity, Infinity] : [-Infinity, -Infinity]};
-}
-
-function hopOver(bisector, site){
-    return bisector.sites.find(e => e !== site);
 }
 
 /**
@@ -78,25 +73,25 @@ function hopOver(bisector, site){
  * @param {Bisector} currentBisector
  * @param {Array} currentCropPoint - [x,y]
  * @param {boolean} goUp
+ * @param {Metric} metric
  * @param {Bisector} crossedBorder
  * @param {Array} mergeArray
- * @param {function} findBisector
  * @returns {Array<Bisector>}
  */
-export function walkMergeLine(currentR, currentL, currentBisector, currentCropPoint, goUp, crossedBorder = null, mergeArray = [], findBisector){
+export function walkMergeLine(currentR, currentL, currentBisector, currentCropPoint, goUp, metric, crossedBorder = null, mergeArray = []){
 
     while(true){
 
         if(
             !currentBisector.sites.every(e => e === currentR || e === currentL)
         ){
-            currentBisector = findBisector(currentR, currentL);
-            trimBisector(currentBisector, crossedBorder, currentCropPoint);
+            currentBisector = metric.bisector(currentR, currentL);
+            trimBisector(currentBisector, crossedBorder, currentCropPoint, metric);
             mergeArray.push(currentBisector);
         }
 
-        let cropLArray = cropCandidates(currentL, currentR, currentBisector, currentCropPoint, crossedBorder, goUp, findBisector, false);
-        let cropRArray = cropCandidates(currentR, currentL, currentBisector, currentCropPoint, crossedBorder, goUp, findBisector, true);
+        let cropLArray = cropCandidates(currentL, currentR, currentBisector, currentCropPoint, crossedBorder, goUp, metric, false);
+        let cropRArray = cropCandidates(currentR, currentL, currentBisector, currentCropPoint, crossedBorder, goUp, metric, true);
 
         let cropL = cropLArray.length > 0 ? cropLArray[0] : noCrop(goUp);
         let cropR = cropRArray.length > 0 ? cropRArray[0] : noCrop(goUp);
@@ -106,14 +101,14 @@ export function walkMergeLine(currentR, currentL, currentBisector, currentCropPo
             !cropL.bisector && !cropR.bisector
         ){
             // Check for orphaned bisectors on either side.
-            let leftOrphan = checkForOrphans(currentR, currentL, goUp, findBisector);
-            let rightOrphan = checkForOrphans(currentL, currentR, goUp, findBisector);
+            let leftOrphan = checkForOrphans(currentR, currentL, goUp, metric);
+            let rightOrphan = checkForOrphans(currentL, currentR, goUp, metric);
 
             if(leftOrphan){
                 removeBisector(leftOrphan);
                 let hopTo = findHopTo(leftOrphan, currentL);
-                currentR = findCorrectW(currentR, hopTo, findBisector);
-                let newMergeBisector = findBisector(hopTo, currentR);
+                currentR = findCorrectW(currentR, hopTo, metric);
+                let newMergeBisector = metric.bisector(hopTo, currentR);
                 mergeArray.push(newMergeBisector);
                 currentBisector = newMergeBisector;
                 currentL = hopTo;
@@ -122,8 +117,8 @@ export function walkMergeLine(currentR, currentL, currentBisector, currentCropPo
             else if(rightOrphan){
                 removeBisector(rightOrphan);
                 let hopTo = findHopTo(rightOrphan, currentR);
-                currentL = findCorrectW(currentL, hopTo, findBisector);
-                let newMergeBisector = findBisector(hopTo, currentL);
+                currentL = findCorrectW(currentL, hopTo, metric);
+                let newMergeBisector = metric.bisector(hopTo, currentL);
                 mergeArray.push(newMergeBisector);
                 currentBisector = newMergeBisector;
                 currentR = hopTo;
@@ -135,36 +130,36 @@ export function walkMergeLine(currentR, currentL, currentBisector, currentCropPo
 
         // Cross the nearest intersecting bisector (or both when equidistant).
         if(determineFirstBorderCross(cropR, cropL, currentCropPoint) === "right"){
-            trimBisector(cropR.bisector, currentBisector, cropR.point);
-            trimBisector(currentBisector, cropR.bisector, cropR.point);
+            trimBisector(cropR.bisector, currentBisector, cropR.point, metric);
+            trimBisector(currentBisector, cropR.bisector, cropR.point, metric);
             currentBisector.intersections.push(cropR.point);
             crossedBorder = cropR.bisector;
-            currentR = hopOver(cropR.bisector, currentR);
+            currentR = findHopTo(cropR.bisector, currentR);
             currentCropPoint = cropR.point;
         }
         else if(determineFirstBorderCross(cropR, cropL, currentCropPoint) === "left"){
-            trimBisector(cropL.bisector, currentBisector, cropL.point);
-            trimBisector(currentBisector, cropL.bisector, cropL.point);
+            trimBisector(cropL.bisector, currentBisector, cropL.point, metric);
+            trimBisector(currentBisector, cropL.bisector, cropL.point, metric);
             currentBisector.intersections.push(cropL.point);
             crossedBorder = cropL.bisector;
-            currentL = hopOver(cropL.bisector, currentL);
+            currentL = findHopTo(cropL.bisector, currentL);
             currentCropPoint = cropL.point;
         }
         else{
             if(cropR.bisector){
-                trimBisector(cropR.bisector, currentBisector, cropR.point);
-                trimBisector(currentBisector, cropR.bisector, cropR.point);
+                trimBisector(cropR.bisector, currentBisector, cropR.point, metric);
+                trimBisector(currentBisector, cropR.bisector, cropR.point, metric);
                 currentBisector.intersections.push(cropR.point);
                 crossedBorder = cropR.bisector;
-                currentR = hopOver(cropR.bisector, currentR);
+                currentR = findHopTo(cropR.bisector, currentR);
                 currentCropPoint = cropR.point;
             }
             if(cropL.bisector){
-                trimBisector(cropL.bisector, currentBisector, cropL.point);
-                trimBisector(currentBisector, cropL.bisector, cropL.point);
+                trimBisector(cropL.bisector, currentBisector, cropL.point, metric);
+                trimBisector(currentBisector, cropL.bisector, cropL.point, metric);
                 currentBisector.intersections.push(cropL.point);
                 crossedBorder = cropL.bisector;
-                currentL = hopOver(cropL.bisector, currentL);
+                currentL = findHopTo(cropL.bisector, currentL);
                 currentCropPoint = cropL.point;
             }
         }
@@ -176,14 +171,13 @@ export function walkMergeLine(currentR, currentL, currentBisector, currentCropPo
  *
  * @param {Site} w - starting site
  * @param {Site} nearestNeighbor
- * @param {number} width
+ * @param {Metric} metric
  * @param {Array} lastIntersect - [x,y]
- * @param {function} findBisector
  * @returns {{startingBisector: Bisector, w: Site, nearestNeighbor: Site, startingIntersection: Array}}
  */
-export function determineStartingBisector(w, nearestNeighbor, width, lastIntersect = null, findBisector){
+export function determineStartingBisector(w, nearestNeighbor, metric, lastIntersect = null){
 
-    let z = [width, w.site[1]];
+    let z = [metric.width, w.site[1]];
 
     if(!lastIntersect){
         lastIntersect = w.site;
@@ -195,8 +189,8 @@ export function determineStartingBisector(w, nearestNeighbor, width, lastInterse
         return {point: bisectorIntersection(zline, bisector), bisector: bisector}
     }).find(intersection => intersection.point);
 
-    if(intersection && distance(w.site, intersection.point) > distance(nearestNeighbor.site, intersection.point)){
-        var startingBisector = findBisector(w, nearestNeighbor);
+    if(intersection && metric.distance(w.site, intersection.point) > metric.distance(nearestNeighbor.site, intersection.point)){
+        var startingBisector = metric.bisector(w, nearestNeighbor);
         return {
             startingBisector: startingBisector,
             w: w,
@@ -204,14 +198,14 @@ export function determineStartingBisector(w, nearestNeighbor, width, lastInterse
             startingIntersection: intersection.point ? intersection.point : w.site
         };
     }
-    else if(intersection && distance(w.site, intersection.point) < distance(nearestNeighbor.site, intersection.point) && intersection.point[0] > lastIntersect[0]){
-        let nextR = intersection.bisector.sites.find(e => e !== nearestNeighbor);
-        return determineStartingBisector(w, nextR, width, intersection.point, findBisector);
+    else if(intersection && metric.distance(w.site, intersection.point) < metric.distance(nearestNeighbor.site, intersection.point) && intersection.point[0] > lastIntersect[0]){
+        let nextR = findHopTo(intersection.bisector, nearestNeighbor);
+        return determineStartingBisector(w, nextR, metric, intersection.point);
     }
     else{
-        w = findCorrectW(w, nearestNeighbor, findBisector);
+        w = findCorrectW(w, nearestNeighbor, metric);
 
-        let startingBisector = findBisector(w, nearestNeighbor);
+        let startingBisector = metric.bisector(w, nearestNeighbor);
 
         return {
             startingBisector: startingBisector,
@@ -227,22 +221,22 @@ export function determineStartingBisector(w, nearestNeighbor, width, lastInterse
  *
  * @param {Site} w
  * @param {Site} nearestNeighbor
- * @param {function} findBisector
+ * @param {Metric} metric
  * @returns {Site}
  */
-export function findCorrectW(w, nearestNeighbor, findBisector){
+export function findCorrectW(w, nearestNeighbor, metric){
 
-    var startingBisector = findBisector(w, nearestNeighbor);
+    var startingBisector = metric.bisector(w, nearestNeighbor);
 
     let wTrap = w.bisectors.map(e => {
         let hopTo = findHopTo(e, w);
-        return {hopTo: hopTo, isTrapped: isBisectorTrapped(hopTo, startingBisector)}
+        return {hopTo: hopTo, isTrapped: isBisectorTrapped(hopTo, startingBisector, metric)}
     })
     .filter(e => e.isTrapped)
-    .sort((a,b) => distance(a.hopTo.site, nearestNeighbor.site) - distance(b.hopTo.site, nearestNeighbor.site))[0];
+    .sort((a,b) => metric.distance(a.hopTo.site, nearestNeighbor.site) - metric.distance(b.hopTo.site, nearestNeighbor.site))[0];
 
     if(wTrap){
-        return findCorrectW(wTrap.hopTo, nearestNeighbor, findBisector);
+        return findCorrectW(wTrap.hopTo, nearestNeighbor, metric);
     }
     else{
         return w;
@@ -255,25 +249,27 @@ export function findCorrectW(w, nearestNeighbor, findBisector){
  * @param {Site} trapper
  * @param {Site} trapped
  * @param {boolean} goUp
- * @param {function} findBisector
- * @returns {Bisector|undefined}
+ * @param {Metric} metric
+ * @returns {Bisector|null}
  */
-export function checkForOrphans(trapper, trapped, goUp, findBisector){
+export function checkForOrphans(trapper, trapped, goUp, metric){
 
-    return trapped.bisectors.filter(bisector => {
+    let orphan = trapped.bisectors.filter(bisector => {
         let hopTo = findHopTo(bisector, trapped);
-        return goUp === hopTo.site[1] < trapped.site[1] && isBisectorTrapped(trapper, bisector);
+        return goUp === hopTo.site[1] < trapped.site[1] && isBisectorTrapped(trapper, bisector, metric);
     }).sort((a,b) => {
 
         let hopToA = findHopTo(a, trapped);
         let hopToB = findHopTo(b, trapped);
 
-        let mergeLineA = findBisector(hopToA, trapper);
-        let mergeLineB = findBisector(hopToB, trapper);
+        let mergeLineA = metric.bisector(hopToA, trapper);
+        let mergeLineB = metric.bisector(hopToB, trapper);
 
         let extremeA = getExtremePoint(mergeLineA, goUp);
         let extremeB = getExtremePoint(mergeLineB, goUp);
 
         return goUp ? extremeB - extremeA : extremeA - extremeB;
     })[0];
+
+    return orphan ? orphan : null;
 }
